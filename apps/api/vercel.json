@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm build",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "data/**"
+    }
+  },
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]
+}
