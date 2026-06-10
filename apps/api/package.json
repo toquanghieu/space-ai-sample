@@ -2,7 +2,7 @@
   "name": "api",
   "version": "0.0.0",
   "scripts": {
-    "build": "nest build && cp -r data dist/data || true",
+    "build": "pnpm --filter @logi/shared build && nest build && (cp -r data dist/data || true)",
     "start": "node dist/src/main.js",
     "start:dev": "nest start --watch",
     "test": "jest"
