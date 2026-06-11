@@ -162,7 +162,8 @@ The macvlan network `net1010` must already exist on the host; `PROXY_IP` must be
 
 > **macvlan caveat:** by Docker's design the host itself usually cannot reach a macvlan container IP (other LAN devices can). If you also need access *from the host*, add a macvlan shim interface on the host.
 
-- **HTTPS / domain:** add a `server` block listening on `443` with your TLS cert in `nginx.conf` (e.g. mount certs from Let's Encrypt / certbot) and publish ports `80`+`443`.
+- **HTTP Basic Auth:** set `BASIC_AUTH_USER` + `BASIC_AUTH_PASSWORD` on the `proxy` service (compose env / Portainer / `.env`) to lock the **whole site** (app + `/api`) behind a login. Leave them empty to keep it open. Credentials are turned into an `htpasswd` file at container startup — never baked into the image or committed. The browser authenticates once, then automatically sends the credentials to `/api` too (same origin).
+- **HTTPS / domain:** add a `server` block listening on `443` with your TLS cert in `nginx.conf` (e.g. mount certs from Let's Encrypt / certbot) and publish ports `80`+`443`. Always pair Basic Auth with HTTPS so the credentials are not sent in clear text.
 
 #### CI/CD — push-deploy to Portainer (GitHub Actions)
 Active deployment: GitHub Actions builds + pushes both images to GHCR, then calls a **Portainer webhook** to re-pull and redeploy. The server never builds.

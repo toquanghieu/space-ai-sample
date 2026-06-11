@@ -33,6 +33,10 @@ services:
 
   proxy:
     image: ${IMAGE_PREFIX:-ghcr.io/owner}/logistics-proxy:${TAG:-latest}
+    environment:
+      # Set both to enable HTTP Basic Auth on the whole site; leave empty to disable.
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
     networks:
       internal: {}
       lan:

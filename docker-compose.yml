@@ -40,6 +40,10 @@ services:
     build:
       context: .
       dockerfile: apps/proxy/Dockerfile
+    environment:
+      # Set both to enable HTTP Basic Auth on the whole site; leave empty to disable.
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
     networks:
       # internal: to reach web/api by service name (docker DNS)
       internal: {}
