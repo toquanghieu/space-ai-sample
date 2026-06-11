@@ -10,7 +10,7 @@ import { SYSTEM_PROMPT } from './system-prompt';
  */
 @Injectable()
 export class OpenAiLlmRouter implements LlmRouter {
-  private readonly model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  private readonly model = process.env.OPENAI_MODEL ?? 'gpt-4o';
   private cachedClient?: OpenAI;
 
   /** Lazily build the client so the app boots (and dashboard/query/forecast work) without a key. */

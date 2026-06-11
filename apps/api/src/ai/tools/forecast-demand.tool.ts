@@ -27,8 +27,29 @@ export class ForecastDemandTool implements AnalyticalTool {
           type: 'object',
           additionalProperties: false,
           properties: {
-            sku: { type: 'array', items: { type: 'string' } },
-            product_category: { type: 'array', items: { type: 'string' } },
+            sku: {
+              type: 'array',
+              description:
+                'Specific SKU code such as "PENCIL-0076". For a general product name (e.g. "pencil"/"bút chì"), use product_category instead, NOT sku.',
+              items: { type: 'string' },
+            },
+            product_category: {
+              type: 'array',
+              description: 'General product family.',
+              items: {
+                type: 'string',
+                enum: [
+                  'BOOK',
+                  'BRUSH',
+                  'CRAYON',
+                  'MARKER',
+                  'PAINT',
+                  'PAPER',
+                  'PENCIL',
+                  'STICKER',
+                ],
+              },
+            },
             region: { type: 'array', items: { type: 'string' } },
           },
         },
