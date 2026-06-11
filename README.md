@@ -158,6 +158,19 @@ docker compose up -d --build
 - **HTTPS / domain:** in `Caddyfile` replace `:80` with your domain and publish ports `80`+`443` — Caddy auto-provisions a Let's Encrypt cert.
 - **Swap Caddy for nginx:** change the `proxy` service image to `nginx:alpine` and mount `./nginx.conf:/etc/nginx/nginx.conf:ro` instead of the Caddyfile.
 
+#### CI/CD — push-deploy to Portainer (GitHub Actions)
+Active deployment: GitHub Actions builds + pushes both images to GHCR, then calls a **Portainer webhook** to re-pull and redeploy. The server never builds.
+
+```
+push to main → GH Actions: build → push ghcr.io/<owner>/logistics-{api,web} → POST Portainer webhook → Portainer re-pulls & redeploys
+```
+
+1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls images from GHCR, mounts the repo's `Caddyfile`). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `PROXY_PORT`. Enable the stack **webhook** and copy its URL.
+2. **GitHub:** add repo secret `PORTAINER_WEBHOOK_URL` = that webhook. Images push to GHCR via the built-in `GITHUB_TOKEN` (no extra secret).
+3. Push to `main` → `.github/workflows/deploy.yml` runs automatically (or trigger manually via *workflow_dispatch*). Each image is tagged `:latest` and `:<sha>`.
+
+Notes: GHCR packages are private by default — either make them public, or add GHCR registry credentials in Portainer so it can pull. The webhook redeploys with `:latest`; enable "re-pull image" on the Portainer stack so the new image is fetched.
+
 ### Option B — Vercel (two projects)
 - **API project:** root `apps/api`, framework "Other", env `OPENAI_API_KEY`. Runs as a serverless function via `apps/api/api/index.ts`; the CSV is bundled (`vercel.json` `includeFiles`).
 - **Web project:** root `apps/web`, framework Next.js, env `NEXT_PUBLIC_API_BASE_URL=<api URL>/api`.

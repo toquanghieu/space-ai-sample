@@ -1,0 +1,44 @@
+# Production stack for Portainer — pulls pre-built images from GHCR (built in CI),
+# so the server never builds. Deploy this file as a Portainer stack and set the
+# IMAGE_PREFIX / TAG / OPENAI_API_KEY / PROXY_PORT environment variables.
+services:
+  api:
+    image: ${IMAGE_PREFIX:-ghcr.io/owner}/logistics-api:${TAG:-latest}
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+    expose:
+      - "3001"
+    restart: unless-stopped
+
+  web:
+    image: ${IMAGE_PREFIX:-ghcr.io/owner}/logistics-web:${TAG:-latest}
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      INTERNAL_API_BASE_URL: http://api:3001/api
+    expose:
+      - "3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "${PROXY_PORT:-8080}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
