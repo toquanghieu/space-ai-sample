@@ -1,4 +1,5 @@
 import type { QueryResult } from '@logi/shared';
+import { labelFor } from '@/lib/labels';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -24,12 +25,12 @@ export function ExplainabilityPanel({ result }: { result: QueryResult }) {
       <div className="flex flex-wrap gap-1">
         {e.metrics.map((m) => (
           <Badge key={m} variant="secondary">
-            metric: {m}
+            metric: {labelFor(m)}
           </Badge>
         ))}
         {e.dimensions.map((d) => (
           <Badge key={d} variant="outline">
-            dim: {d}
+            dim: {labelFor(d)}
           </Badge>
         ))}
         {e.timeGrain && <Badge variant="outline">grain: {e.timeGrain}</Badge>}
@@ -46,7 +47,7 @@ export function ExplainabilityPanel({ result }: { result: QueryResult }) {
             <TableHeader>
               <TableRow>
                 {cols.map((c) => (
-                  <TableHead key={c}>{c}</TableHead>
+                  <TableHead key={c}>{labelFor(c)}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>

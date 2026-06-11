@@ -13,28 +13,9 @@ import {
   CartesianGrid,
 } from 'recharts';
 
+import { labelFor } from '@/lib/labels';
+
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea'];
-
-/** Human-readable labels for machine metric/dimension keys shown in charts. */
-const LABELS: Record<string, string> = {
-  order_count: 'Orders',
-  delivered_count: 'Delivered',
-  delayed_count: 'Delayed',
-  on_time_rate: 'On-time rate',
-  avg_delivery_days: 'Avg delivery (days)',
-  total_quantity: 'Total quantity',
-  total_order_value: 'Order value (USD)',
-  value: 'Quantity',
-  period: 'Period',
-  carrier: 'Carrier',
-  region: 'Region',
-  status: 'Status',
-  product_category: 'Category',
-  destination_city: 'Destination',
-  warehouse: 'Warehouse',
-};
-
-const labelFor = (key: string) => LABELS[key] ?? key;
 
 export function ChartRenderer({
   chart,
