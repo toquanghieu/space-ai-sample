@@ -1,6 +1,7 @@
 # Production stack for Portainer — pulls pre-built images from GHCR (built in CI),
-# so the server never builds. Deploy this file as a Portainer stack and set the
-# IMAGE_PREFIX / TAG / OPENAI_API_KEY / PROXY_PORT environment variables.
+# so the server never builds. The proxy takes a dedicated LAN IP on the existing
+# macvlan network (no host port). Set IMAGE_PREFIX / TAG / OPENAI_API_KEY /
+# PROXY_IP / LAN_NETWORK as stack environment variables.
 services:
   api:
     image: ${IMAGE_PREFIX:-ghcr.io/owner}/logistics-api:${TAG:-latest}
@@ -11,6 +12,8 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
     expose:
       - "3001"
+    networks:
+      - internal
     restart: unless-stopped
 
   web:
@@ -22,17 +25,28 @@ services:
       INTERNAL_API_BASE_URL: http://api:3001/api
     expose:
       - "3000"
+    networks:
+      - internal
     depends_on:
       - api
     restart: unless-stopped
 
   proxy:
     image: nginx:alpine
-    ports:
-      - "${PROXY_PORT:-8080}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      internal: {}
+      lan:
+        ipv4_address: ${PROXY_IP:-10.10.10.63}
     depends_on:
       - web
       - api
     restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
+  lan:
+    external: true
+    name: ${LAN_NETWORK:-net1010}

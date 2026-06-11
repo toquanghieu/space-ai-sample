@@ -139,9 +139,12 @@ The orchestrator is tested with a fake `LlmRouter`, so the suite runs offline.
 ### Option A — Self-hosted with Docker / Portainer (single origin)
 A reverse proxy (nginx) fronts both apps on **one origin**: `/api/*` → NestJS, everything else → Next.js. The browser calls the API via the relative `/api` path, so there is **no CORS**; SSR reaches the API over the internal docker network.
 
+The proxy is attached to an existing **macvlan** network so it gets its own LAN IP (default `10.10.10.63` on `net1010`) — browse the app directly at `http://10.10.10.63`, no host port published. `web` and `api` stay on the internal bridge only (not exposed to the LAN).
+
 ```
-browser → nginx :80 ─┬─ /api/* → api  :3001  (NestJS)
-                     └─ /*     → web  :3000  (Next.js standalone)
+LAN ─ http://10.10.10.63 ─→ nginx (macvlan net1010 + internal bridge)
+                              ├─ /api/* → api  :3001  (NestJS)
+                              └─ /*     → web  :3000  (Next.js standalone)
 ```
 
 Files: `docker-compose.yml`, `nginx.conf`, `apps/api/Dockerfile`, `apps/web/Dockerfile`.
@@ -150,10 +153,14 @@ Files: `docker-compose.yml`, `nginx.conf`, `apps/api/Dockerfile`, `apps/web/Dock
 ```bash
 cp .env.docker.example .env   # set OPENAI_API_KEY
 docker compose up -d --build
-# open http://localhost:8080  (PROXY_PORT)
+# open http://10.10.10.63  (the proxy's macvlan IP)
 ```
 
-**Portainer:** Stacks → Add stack → paste `docker-compose.yml` (or point to the Git repo). Set `OPENAI_API_KEY` (and optional `OPENAI_MODEL`, `PROXY_PORT`) as stack environment variables, then Deploy. Only the proxy port is published; `web` and `api` stay on the internal network.
+The macvlan network `net1010` must already exist on the host; `PROXY_IP` must be inside its subnet and unused (ideally outside the DHCP range). Override the defaults with `LAN_NETWORK` / `PROXY_IP` env vars.
+
+**Portainer:** Stacks → Add stack → paste `docker-compose.yml` (or point to the Git repo). Set `OPENAI_API_KEY` (and optional `OPENAI_MODEL`, `LAN_NETWORK`, `PROXY_IP`) as stack environment variables, then Deploy. `web` and `api` stay on the internal bridge; only the proxy is reachable on the LAN via its macvlan IP.
+
+> **macvlan caveat:** by Docker's design the host itself usually cannot reach a macvlan container IP (other LAN devices can). If you also need access *from the host*, add a macvlan shim interface on the host.
 
 - **HTTPS / domain:** add a `server` block listening on `443` with your TLS cert in `nginx.conf` (e.g. mount certs from Let's Encrypt / certbot) and publish ports `80`+`443`.
 
@@ -164,7 +171,7 @@ Active deployment: GitHub Actions builds + pushes both images to GHCR, then call
 push to main → GH Actions: build → push ghcr.io/<owner>/logistics-{api,web} → POST Portainer webhook → Portainer re-pulls & redeploys
 ```
 
-1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls images from GHCR, mounts the repo's `nginx.conf`). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `PROXY_PORT`. Enable the stack **webhook** and copy its URL.
+1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls images from GHCR, mounts the repo's `nginx.conf`). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `LAN_NETWORK=net1010`, `PROXY_IP=10.10.10.63`. Enable the stack **webhook** and copy its URL.
 2. **GitHub:** add repo secret `PORTAINER_WEBHOOK_URL` = that webhook. Images push to GHCR via the built-in `GITHUB_TOKEN` (no extra secret).
 3. Push to `main` → `.github/workflows/deploy.yml` runs automatically (or trigger manually via *workflow_dispatch*). Each image is tagged `:latest` and `:<sha>`.
 
