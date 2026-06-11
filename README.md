@@ -8,7 +8,7 @@ A full-stack analytics product over a logistics dataset (calendar year 2025, 400
 
 The AI layer **only orchestrates** deterministic backend tools — it routes a question to a tool and emits structured arguments, but never computes or invents numbers, and never runs raw SQL.
 
-- **Live app:** _<web URL>_ · no login required
+- **Live app:** _<web URL>_
 - **API:** _<api URL>_/api/dashboard
 
 ---
@@ -22,26 +22,23 @@ The AI layer **only orchestrates** deterministic backend tools — it routes a q
 ### Local development
 ```bash
 pnpm install
+cp apps/api/.env.example apps/api/.env            # set OPENAI_API_KEY (only the /ask endpoint needs it)
+cp apps/web/.env.local.example apps/web/.env.local
 
-# 1) API (NestJS) on :3001
-cd apps/api
-cp .env.example .env          # set OPENAI_API_KEY (only needed for the /ask NL endpoint)
-pnpm build && pnpm start      # or: pnpm start:dev
-
-# 2) Web (Next.js) on :3000  — in a second terminal
-cd apps/web
-cp .env.local.example .env.local
-pnpm dev
+pnpm dev        # runs the API (:3001) and the web app (:3000) together
 ```
 Open http://localhost:3000. The dashboard and forecasting work without an API key; only the natural-language **Ask AI** tab requires `OPENAI_API_KEY`.
+
+Run them separately with `pnpm dev:api` / `pnpm dev:web` if needed. `pnpm test` runs the API test suite.
 
 ### Environment variables
 | App | Variable | Required | Default | Purpose |
 |-----|----------|----------|---------|---------|
 | api | `OPENAI_API_KEY` | for `/ask` only | – | OpenAI auth for NL routing |
-| api | `OPENAI_MODEL` | no | `gpt-4o-mini` | routing model |
+| api | `OPENAI_MODEL` | no | `gpt-4o` | routing model |
 | api | `PORT` | no | `3001` | local port |
-| web | `NEXT_PUBLIC_API_BASE_URL` | yes | `http://localhost:3001/api` | API base URL |
+| web | `NEXT_PUBLIC_API_BASE_URL` | local dev | `/api` | API base URL the **browser** calls (`.env.local` sets `http://localhost:3001/api` for dev) |
+| web | `INTERNAL_API_BASE_URL` | docker | `http://localhost:3001/api` | API URL used by **SSR** (server-side) |
 
 ---
 
@@ -70,13 +67,11 @@ User question
 ```
 The dashboard uses the same computation layer directly via `GET /api/dashboard`.
 
-### Design decisions & patterns (SOLID)
-- **Repository** (`OrderRepository` port → `InMemoryOrderRepository`): business logic depends on an abstraction, so the data source can become Postgres with no logic change (DIP).
-- **Strategy + Factory** (`ForecastStrategy` → `ExponentialSmoothingStrategy` / `MovingAverageStrategy` / `LinearRegressionStrategy`, resolved by `ForecastStrategyFactory`): adding a forecasting method is a one-line factory registration — the service never changes (OCP).
-- **Registry** (`AnalyticalTool` port + tool list): the orchestrator routes through a registry; adding an AI tool means registering a provider, not editing the orchestrator (OCP).
-- **Builder** (`QueryExplanationBuilder`): assembles the explainability payload, keeping it out of the service (SRP).
-- **DIP via DI tokens** (`ORDER_REPOSITORY`, `LLM_ROUTER`, `ANALYTICAL_TOOLS`): every cross-layer dependency is an interface, which also makes the orchestrator unit-testable with a fake router (no network).
-- **No raw SQL / no DB**: 400 rows are held in memory and queried by a typed, structured query engine — this directly satisfies "avoid executing raw AI-generated SQL" and is right-sized (not over-engineered).
+### Design decisions
+- **No raw SQL / no DB:** the 400-row dataset is held in memory and queried by a typed, structured query engine — directly satisfying "avoid executing raw AI-generated SQL" and right-sized for the data.
+- **Swappable data source:** services depend on an `OrderRepository` interface, so the in-memory store can become Postgres with no change to business logic.
+- **Pluggable forecasting & AI tools:** forecast methods and analytical tools sit behind interfaces (resolved by a factory / a tool registry), so adding one doesn't touch existing services.
+- **Testable orchestration:** the LLM router is an interface, so the orchestrator is unit-tested with a fake router (no network).
 
 ### API endpoints
 | Method | Path | Purpose |
@@ -92,7 +87,7 @@ The dashboard uses the same computation layer directly via `GET /api/dashboard`.
 - **Interpretation:** the question is sent to OpenAI with `tool_choice: 'required'` and `temperature: 0`. The model's only job is to pick one tool and produce structured arguments.
 - **Tool selection:** `query_analytics` for descriptive/diagnostic questions; `forecast_demand` for predictions. Tools describe themselves with a provider-agnostic definition, adapted to OpenAI function-calling by the router.
 - **Safety:** every argument object is validated by Zod **before** execution. Invalid args → HTTP 400, never run. The model never emits numbers; all values come from the deterministic engine. Chart type is chosen deterministically from the result shape, not by the model.
-- **AI usage disclosure:** OpenAI (`gpt-4o-mini`) is used for question→tool routing only. This codebase was built with AI coding assistance.
+- **AI usage disclosure:** OpenAI (`gpt-4o`) is used for question→tool routing only.
 
 ---
 
@@ -117,26 +112,25 @@ Known live values: 400 total · 304 delivered · 55 delayed · 84.7% on-time · 
 ## Limitations
 - Single-tool routing only; no chained/compositional analytics.
 - Forecasting is monthly only; no seasonality (the dataset spans a single year, so a 12-month seasonal cycle cannot be estimated — would need 2+ years).
-- No authentication, no persisted query history.
-- `/ask` requires `OPENAI_API_KEY`; without it the endpoint returns a graceful 400 while the rest of the app keeps working.
+- No persisted query history. (Optional HTTP Basic Auth is available at the proxy — see Deployment.)
+- `/ask` requires `OPENAI_API_KEY`; without it the endpoint returns a graceful error while the rest of the app keeps working.
 
 ## Future Improvements
-- Postgres + a read-only SQL/view layer behind the same `OrderRepository` port.
+- Postgres + a read-only SQL/view layer behind the same `OrderRepository` interface.
 - Multi-step tool plans and ambiguous-query clarification.
 - Richer forecasting (Holt-Winters / seasonality), confidence intervals.
-- Caching, query history, auth, Docker, and e2e tests.
+- Caching, query history, and e2e tests.
 
 ---
 
 ## Tests
 ```bash
-pnpm --filter api test     # 27 unit tests: KPIs, query engine, strategies, services, orchestrator
+pnpm test     # 33 unit tests: KPIs, query engine, strategies, services, orchestrator
 ```
 The orchestrator is tested with a fake `LlmRouter`, so the suite runs offline.
 
-## Deployment
+## Deployment (self-hosted, Docker / Portainer)
 
-### Option A — Self-hosted with Docker / Portainer (single origin)
 A reverse proxy (nginx) fronts both apps on **one origin**: `/api/*` → NestJS, everything else → Next.js. The browser calls the API via the relative `/api` path, so there is **no CORS**; SSR reaches the API over the internal docker network.
 
 The proxy is attached to an existing **macvlan** network so it gets its own LAN IP (default `10.10.10.63` on `net1010`) — browse the app directly at `http://10.10.10.63`, no host port published. `web` and `api` stay on the internal bridge only (not exposed to the LAN).
@@ -178,11 +172,6 @@ push to main → GH Actions: build → push ghcr.io/<owner>/logistics-{api,web,p
 
 Notes: GHCR packages are private by default — either make them public, or add GHCR registry credentials in Portainer so it can pull. The webhook redeploys with `:latest`; enable "re-pull image" on the Portainer stack so the new image is fetched.
 
-### Option B — Vercel (two projects)
-- **API project:** root `apps/api`, framework "Other", env `OPENAI_API_KEY`. Runs as a serverless function via `apps/api/api/index.ts`; the CSV is bundled (`vercel.json` `includeFiles`).
-- **Web project:** root `apps/web`, framework Next.js, env `NEXT_PUBLIC_API_BASE_URL=<api URL>/api`.
-- Fallback: if NestJS cold-starts are undesirable, deploy the API to Railway/Render and only change `NEXT_PUBLIC_API_BASE_URL` — no code change.
-
 ## Project structure
 
 The backend is organised **by feature** (package-by-feature), not by technical layer
@@ -191,28 +180,21 @@ conventional layered concepts still exist — they are just placed where they be
 
 | Conventional concept | Where it lives here |
 |----------------------|---------------------|
-| **interfaces** (abstractions / ports) | `apps/api/src/domain/ports.ts` — `OrderRepository`, `ForecastStrategy`, `AnalyticalTool`, `LlmRouter`, `ToolDefinition` + DI tokens (the DIP layer) |
+| **interfaces** (abstractions / ports) | `apps/api/src/domain/ports.ts` — `OrderRepository`, `ForecastStrategy`, `AnalyticalTool`, `LlmRouter`, `ToolDefinition` + DI tokens |
 | **DTOs / validation** | `packages/shared/src/schemas.ts` — Zod schemas (`QuerySpec`, `ForecastSpec`, `AskRequest`, `Filters`) validated at every boundary; `types.ts` — the typed contracts. Zod (not class-validator) so the **same DTOs are shared with the frontend** and validate LLM output |
 | **utils** (pure helpers) | co-located with their feature: `analytics/kpi.ts`, `analytics/query-engine.ts`, `analytics/chart-select.ts`, `ai/normalize-args.ts` |
 
 ```
 packages/shared/src        types.ts + schemas.ts  → the cross-app contract (DTOs)
 apps/api/src
-  domain/ports.ts          all interfaces + DI tokens (DIP/ISP)
+  domain/ports.ts          all interfaces + DI tokens
   dataset/                 InMemoryOrderRepository  (Repository pattern)
   analytics/               kpi, query-engine, chart-select, QueryExplanationBuilder, service, controller
   forecast/                ForecastService + strategies/ (Strategy) + ForecastStrategyFactory (Factory)
   ai/                      OrchestratorService, OpenAiLlmRouter, tools/ (Registry), normalize-args, filter
-  configure-app.ts         shared app config; main.ts (local) / api/index.ts (Vercel serverless)
+  configure-app.ts         shared app config; main.ts (local) / api/index.ts (serverless)
 apps/web/src
   app/                     routes: page.tsx (dashboard), ask/page.tsx, error.tsx, loading.tsx, layout.tsx
   components/              app-sidebar, chart-renderer, chat-panel, explainability-panel, kpi-card, ui/
   lib/                     api.ts (fetch), labels.ts (display labels)
 ```
-
-### SOLID — where each principle is applied
-- **S** — single-responsibility files: `kpi.ts` only KPIs, `query-engine.ts` only querying, `QueryExplanationBuilder` only builds the explainability payload.
-- **O** — add a forecast method or an AI tool without editing any service (Strategy+Factory, tool Registry).
-- **L** — strategies and tools are interchangeable behind their interface.
-- **I** — small, focused interfaces in `domain/ports.ts` (one method each).
-- **D** — services depend on interface tokens (`ORDER_REPOSITORY`, `LLM_ROUTER`, `ANALYTICAL_TOOLS`), never on concretes; this is also what makes the orchestrator unit-testable with a fake router.
