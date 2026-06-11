@@ -40,7 +40,10 @@ export class ForecastService {
   ) {}
 
   forecast(spec: ForecastSpec): ForecastResult {
-    const method = spec.method ?? 'linear_regression';
+    // Default to moving average: the data is noisy with an early-month spike, so a
+    // least-squares trend line gets dragged down and forecasts below recent actuals.
+    // A trailing moving average tracks the recent level and stays continuous.
+    const method = spec.method ?? 'moving_average';
     const strategy = this.strategies.create(method);
     const filtered = applyFilters(this.orders.findAll(), spec.filters);
 

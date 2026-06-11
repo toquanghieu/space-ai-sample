@@ -108,7 +108,8 @@ Known live values: 400 total · 304 delivered · 55 delayed · 84.7% on-time · 
 
 ## Assumptions & Simplifications
 - In-memory dataset (no DB), treated read-only, given only 400 rows.
-- Forecasting aggregates to **monthly** grain; safety stock = 20% buffer.
+- Forecasting aggregates to **monthly** grain; safety stock = 20% buffer. **Default method is moving average** — the history is noisy with an early-month spike, so a least-squares trend line is dragged below recent actuals; a trailing moving average tracks the recent level and stays continuous. Linear regression remains available on request.
+- Forecasts can be broken down per dimension via `groupBy` (e.g. one line per product category), each with its own inventory recommendation.
 - Relative date phrases ("last 3 months") are anchored to the dataset max date `2025-12-30`.
 - A question maps to exactly one tool (no multi-step compositional queries).
 
