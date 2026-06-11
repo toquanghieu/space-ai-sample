@@ -72,7 +72,7 @@ The dashboard uses the same computation layer directly via `GET /api/dashboard`.
 
 ### Design decisions & patterns (SOLID)
 - **Repository** (`OrderRepository` port → `InMemoryOrderRepository`): business logic depends on an abstraction, so the data source can become Postgres with no logic change (DIP).
-- **Strategy + Factory** (`ForecastStrategy` → `MovingAverageStrategy` / `LinearRegressionStrategy`, resolved by `ForecastStrategyFactory`): adding a forecasting method doesn't touch the service (OCP).
+- **Strategy + Factory** (`ForecastStrategy` → `ExponentialSmoothingStrategy` / `MovingAverageStrategy` / `LinearRegressionStrategy`, resolved by `ForecastStrategyFactory`): adding a forecasting method is a one-line factory registration — the service never changes (OCP).
 - **Registry** (`AnalyticalTool` port + tool list): the orchestrator routes through a registry; adding an AI tool means registering a provider, not editing the orchestrator (OCP).
 - **Builder** (`QueryExplanationBuilder`): assembles the explainability payload, keeping it out of the service (SRP).
 - **DIP via DI tokens** (`ORDER_REPOSITORY`, `LLM_ROUTER`, `ANALYTICAL_TOOLS`): every cross-layer dependency is an interface, which also makes the orchestrator unit-testable with a fake router (no network).
@@ -140,8 +140,35 @@ The orchestrator is tested with a fake `LlmRouter`, so the suite runs offline.
 - Fallback: if NestJS cold-starts are undesirable, deploy the API to Railway/Render and only change `NEXT_PUBLIC_API_BASE_URL` — no code change.
 
 ## Project structure
+
+The backend is organised **by feature** (package-by-feature), not by technical layer
+(`dto/`, `interfaces/`, `utils/`). Files that change together live together. The
+conventional layered concepts still exist — they are just placed where they belong:
+
+| Conventional concept | Where it lives here |
+|----------------------|---------------------|
+| **interfaces** (abstractions / ports) | `apps/api/src/domain/ports.ts` — `OrderRepository`, `ForecastStrategy`, `AnalyticalTool`, `LlmRouter`, `ToolDefinition` + DI tokens (the DIP layer) |
+| **DTOs / validation** | `packages/shared/src/schemas.ts` — Zod schemas (`QuerySpec`, `ForecastSpec`, `AskRequest`, `Filters`) validated at every boundary; `types.ts` — the typed contracts. Zod (not class-validator) so the **same DTOs are shared with the frontend** and validate LLM output |
+| **utils** (pure helpers) | co-located with their feature: `analytics/kpi.ts`, `analytics/query-engine.ts`, `analytics/chart-select.ts`, `ai/normalize-args.ts` |
+
 ```
-packages/shared   types + Zod schemas (the contract)
-apps/api          NestJS: domain ports, repository, analytics, forecast strategies, AI orchestration
-apps/web          Next.js: dashboard, AI chat, charts, explainability
+packages/shared/src        types.ts + schemas.ts  → the cross-app contract (DTOs)
+apps/api/src
+  domain/ports.ts          all interfaces + DI tokens (DIP/ISP)
+  dataset/                 InMemoryOrderRepository  (Repository pattern)
+  analytics/               kpi, query-engine, chart-select, QueryExplanationBuilder, service, controller
+  forecast/                ForecastService + strategies/ (Strategy) + ForecastStrategyFactory (Factory)
+  ai/                      OrchestratorService, OpenAiLlmRouter, tools/ (Registry), normalize-args, filter
+  configure-app.ts         shared app config; main.ts (local) / api/index.ts (Vercel serverless)
+apps/web/src
+  app/                     routes: page.tsx (dashboard), ask/page.tsx, error.tsx, loading.tsx, layout.tsx
+  components/              app-sidebar, chart-renderer, chat-panel, explainability-panel, kpi-card, ui/
+  lib/                     api.ts (fetch), labels.ts (display labels)
 ```
+
+### SOLID — where each principle is applied
+- **S** — single-responsibility files: `kpi.ts` only KPIs, `query-engine.ts` only querying, `QueryExplanationBuilder` only builds the explainability payload.
+- **O** — add a forecast method or an AI tool without editing any service (Strategy+Factory, tool Registry).
+- **L** — strategies and tools are interchangeable behind their interface.
+- **I** — small, focused interfaces in `domain/ports.ts` (one method each).
+- **D** — services depend on interface tokens (`ORDER_REPOSITORY`, `LLM_ROUTER`, `ANALYTICAL_TOOLS`), never on concretes; this is also what makes the orchestrator unit-testable with a fake router.
