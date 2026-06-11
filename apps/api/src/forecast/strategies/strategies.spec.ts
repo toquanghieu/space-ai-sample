@@ -1,9 +1,11 @@
 import { LinearRegressionStrategy } from './linear-regression.strategy';
 import { MovingAverageStrategy } from './moving-average.strategy';
+import { ExponentialSmoothingStrategy } from './exponential-smoothing.strategy';
 
 describe('forecast strategies', () => {
   const linear = new LinearRegressionStrategy();
   const moving = new MovingAverageStrategy(3);
+  const expo = new ExponentialSmoothingStrategy(0.5, 0.2);
 
   it('linear regression extrapolates a perfect upward trend', () => {
     const fc = linear.forecast([10, 20, 30, 40], 2); // slope 10
@@ -23,8 +25,22 @@ describe('forecast strategies', () => {
     expect(fc[1]).toBe(9);
   });
 
+  it('exponential smoothing tracks an upward trend and weights recent data', () => {
+    const fc = expo.forecast([10, 20, 30, 40], 2);
+    expect(fc[0]).toBeGreaterThan(30); // continues upward from recent level
+    expect(fc[1]).toBeGreaterThanOrEqual(fc[0]); // trend keeps rising
+    expect(Math.min(...fc)).toBeGreaterThanOrEqual(0);
+  });
+
+  it('exponential smoothing lets an early outlier fade (not dragged like OLS)', () => {
+    const series = [200, 30, 32, 28, 31, 29]; // big spike then ~30
+    const fc = expo.forecast(series, 1);
+    expect(fc[0]).toBeLessThan(60); // close to recent ~30, not pulled toward 200
+  });
+
   it('exposes the correct method tag', () => {
     expect(linear.method).toBe('linear_regression');
     expect(moving.method).toBe('moving_average');
+    expect(expo.method).toBe('exponential_smoothing');
   });
 });

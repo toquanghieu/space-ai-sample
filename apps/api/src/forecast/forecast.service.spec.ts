@@ -3,6 +3,7 @@ import { ForecastService } from './forecast.service';
 import { ForecastStrategyFactory } from './forecast-strategy.factory';
 import { LinearRegressionStrategy } from './strategies/linear-regression.strategy';
 import { MovingAverageStrategy } from './strategies/moving-average.strategy';
+import { ExponentialSmoothingStrategy } from './strategies/exponential-smoothing.strategy';
 
 describe('ForecastService (real dataset)', () => {
   let svc: ForecastService;
@@ -12,6 +13,7 @@ describe('ForecastService (real dataset)', () => {
     const factory = new ForecastStrategyFactory(
       new LinearRegressionStrategy(),
       new MovingAverageStrategy(3),
+      new ExponentialSmoothingStrategy(0.5, 0.2),
     );
     svc = new ForecastService(repo, factory);
   });

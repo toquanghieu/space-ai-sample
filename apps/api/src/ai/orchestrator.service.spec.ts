@@ -5,6 +5,7 @@ import { ForecastService } from '../forecast/forecast.service';
 import { ForecastStrategyFactory } from '../forecast/forecast-strategy.factory';
 import { LinearRegressionStrategy } from '../forecast/strategies/linear-regression.strategy';
 import { MovingAverageStrategy } from '../forecast/strategies/moving-average.strategy';
+import { ExponentialSmoothingStrategy } from '../forecast/strategies/exponential-smoothing.strategy';
 import { QueryAnalyticsTool } from './tools/query-analytics.tool';
 import { ForecastDemandTool } from './tools/forecast-demand.tool';
 import type { LlmRouter, ToolRouteDecision } from '../domain/ports';
@@ -28,6 +29,7 @@ describe('OrchestratorService', () => {
     const factory = new ForecastStrategyFactory(
       new LinearRegressionStrategy(),
       new MovingAverageStrategy(3),
+      new ExponentialSmoothingStrategy(0.5, 0.2),
     );
     const forecast = new ForecastService(repo, factory);
     queryTool = new QueryAnalyticsTool(analytics);

@@ -88,7 +88,7 @@ export interface QueryResult {
   explanation: QueryExplanation;
 }
 
-export type ForecastMethod = 'moving_average' | 'linear_regression';
+export type ForecastMethod = 'moving_average' | 'linear_regression' | 'exponential_smoothing';
 
 export type ForecastGroupDimension = 'product_category' | 'carrier' | 'region' | 'sku';
 

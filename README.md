@@ -108,14 +108,15 @@ Known live values: 400 total · 304 delivered · 55 delayed · 84.7% on-time · 
 
 ## Assumptions & Simplifications
 - In-memory dataset (no DB), treated read-only, given only 400 rows.
-- Forecasting aggregates to **monthly** grain; safety stock = 20% buffer. **Default method is moving average** — the history is noisy with an early-month spike, so a least-squares trend line is dragged below recent actuals; a trailing moving average tracks the recent level and stays continuous. Linear regression remains available on request.
+- Forecasting aggregates to **monthly** grain. The **forecast value** is computed from the historical monthly series; the **20% safety stock** is a separate buffer added on top for the inventory recommendation (not part of the forecast).
+- Three methods available (Strategy pattern): **exponential smoothing (Holt, default)**, moving average, linear regression. Default is exponential smoothing because it weights recent months more — so the early-month spike fades instead of dragging the trend down (as plain least-squares does), while still capturing level + trend from the actual data.
 - Forecasts can be broken down per dimension via `groupBy` (e.g. one line per product category), each with its own inventory recommendation.
 - Relative date phrases ("last 3 months") are anchored to the dataset max date `2025-12-30`.
 - A question maps to exactly one tool (no multi-step compositional queries).
 
 ## Limitations
 - Single-tool routing only; no chained/compositional analytics.
-- Two basic forecasting methods (moving average, linear regression), monthly only.
+- Forecasting is monthly only; no seasonality (the dataset spans a single year, so a 12-month seasonal cycle cannot be estimated — would need 2+ years).
 - No authentication, no persisted query history.
 - `/ask` requires `OPENAI_API_KEY`; without it the endpoint returns a graceful 400 while the rest of the app keeps working.
 

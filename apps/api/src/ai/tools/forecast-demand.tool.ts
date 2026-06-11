@@ -23,7 +23,11 @@ export class ForecastDemandTool implements AnalyticalTool {
       properties: {
         metric: { type: 'string', enum: ['total_quantity', 'order_count'] },
         horizonMonths: { type: 'integer', minimum: 1, maximum: 12 },
-        method: { type: 'string', enum: ['moving_average', 'linear_regression'] },
+        method: {
+          type: 'string',
+          enum: ['moving_average', 'linear_regression', 'exponential_smoothing'],
+          description: 'Forecasting method. Default (omit) is exponential smoothing.',
+        },
         groupBy: {
           type: 'string',
           enum: ['product_category', 'carrier', 'region', 'sku'],

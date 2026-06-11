@@ -8,6 +8,7 @@ import { ForecastController } from './forecast/forecast.controller';
 import { ForecastStrategyFactory } from './forecast/forecast-strategy.factory';
 import { LinearRegressionStrategy } from './forecast/strategies/linear-regression.strategy';
 import { MovingAverageStrategy } from './forecast/strategies/moving-average.strategy';
+import { ExponentialSmoothingStrategy } from './forecast/strategies/exponential-smoothing.strategy';
 import { OpenAiLlmRouter } from './ai/openai-llm-router';
 import { OrchestratorService } from './ai/orchestrator.service';
 import { AiController } from './ai/ai.controller';
@@ -23,6 +24,7 @@ import { ForecastDemandTool } from './ai/tools/forecast-demand.tool';
     // Forecasting strategies (Strategy) + factory
     LinearRegressionStrategy,
     { provide: MovingAverageStrategy, useFactory: () => new MovingAverageStrategy(3) },
+    { provide: ExponentialSmoothingStrategy, useFactory: () => new ExponentialSmoothingStrategy(0.5, 0.2) },
     ForecastStrategyFactory,
 
     // Services

@@ -3,6 +3,7 @@ import type { ForecastMethod } from '@logi/shared';
 import type { ForecastStrategy } from '../domain/ports';
 import { LinearRegressionStrategy } from './strategies/linear-regression.strategy';
 import { MovingAverageStrategy } from './strategies/moving-average.strategy';
+import { ExponentialSmoothingStrategy } from './strategies/exponential-smoothing.strategy';
 
 /**
  * Factory pattern: resolves the {@link ForecastStrategy} for a requested method.
@@ -16,10 +17,12 @@ export class ForecastStrategyFactory {
   constructor(
     linearRegression: LinearRegressionStrategy,
     movingAverage: MovingAverageStrategy,
+    exponentialSmoothing: ExponentialSmoothingStrategy,
   ) {
     this.registry = new Map<ForecastMethod, ForecastStrategy>([
       [linearRegression.method, linearRegression],
       [movingAverage.method, movingAverage],
+      [exponentialSmoothing.method, exponentialSmoothing],
     ]);
   }
 

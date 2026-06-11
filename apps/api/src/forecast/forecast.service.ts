@@ -40,10 +40,10 @@ export class ForecastService {
   ) {}
 
   forecast(spec: ForecastSpec): ForecastResult {
-    // Default to moving average: the data is noisy with an early-month spike, so a
-    // least-squares trend line gets dragged down and forecasts below recent actuals.
-    // A trailing moving average tracks the recent level and stays continuous.
-    const method = spec.method ?? 'moving_average';
+    // Default to Holt exponential smoothing: it weights recent months more than
+    // older ones, so the early-month spike fades (unlike OLS, which it drags down)
+    // while still capturing level + trend from the actual history.
+    const method = spec.method ?? 'exponential_smoothing';
     const strategy = this.strategies.create(method);
     const filtered = applyFilters(this.orders.findAll(), spec.filters);
 
@@ -108,12 +108,12 @@ export class ForecastService {
       seriesKeys,
       forecastStartPeriod: forecastMonths[0] ?? null,
       groups,
-      explanation: `Aggregated ${spec.metric} by month${
+      explanation: `Built from ${historyMonths.length} months of actual history${
         spec.groupBy ? ` per ${spec.groupBy}` : ''
-      } (${historyMonths.length} historical months), then applied ${method.replace(
+      }: aggregated ${spec.metric} by month, then applied ${method.replace(
         '_',
         ' ',
-      )} per series to project ${spec.horizonMonths} month(s). Forecasts are floored at 0 and rounded to whole units.`,
+      )} to project ${spec.horizonMonths} month(s) of demand (floored at 0, whole units). The inventory recommendation then adds a separate 20% safety-stock buffer on top of the projected demand.`,
     };
   }
 }
