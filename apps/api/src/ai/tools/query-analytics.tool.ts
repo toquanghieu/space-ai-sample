@@ -3,6 +3,7 @@ import { QuerySpecSchema } from '@logi/shared';
 import type { QueryResult } from '@logi/shared';
 import type { AnalyticalTool, ToolDefinition, ToolExecution } from '../../domain/ports';
 import { AnalyticsService } from '../../analytics/analytics.service';
+import { unflattenLlmArgs } from '../normalize-args';
 
 /**
  * `query_analytics` AI tool. Validates the LLM's structured args with Zod, then
@@ -97,7 +98,7 @@ export class QueryAnalyticsTool implements AnalyticalTool {
   };
 
   run(rawArgs: unknown): ToolExecution {
-    const spec = QuerySpecSchema.parse(rawArgs); // throws ZodError -> 400, never executed
+    const spec = QuerySpecSchema.parse(unflattenLlmArgs(rawArgs)); // throws ZodError -> 400, never executed
     const result = this.analytics.query(spec);
     return { tool: 'query_analytics', query: result, answer: this.summarize(result) };
   }

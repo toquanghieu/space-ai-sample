@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ForecastSpecSchema } from '@logi/shared';
 import type { AnalyticalTool, ToolDefinition, ToolExecution } from '../../domain/ports';
 import { ForecastService } from '../../forecast/forecast.service';
+import { unflattenLlmArgs } from '../normalize-args';
 
 /**
  * `forecast_demand` AI tool. Validates the LLM's structured args with Zod, then
@@ -37,7 +38,7 @@ export class ForecastDemandTool implements AnalyticalTool {
   };
 
   run(rawArgs: unknown): ToolExecution {
-    const spec = ForecastSpecSchema.parse(rawArgs);
+    const spec = ForecastSpecSchema.parse(unflattenLlmArgs(rawArgs));
     const result = this.forecast.forecast(spec);
     return {
       tool: 'forecast_demand',

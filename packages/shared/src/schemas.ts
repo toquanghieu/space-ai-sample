@@ -19,7 +19,7 @@ export const FiltersSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
   })
-  .strict();
+  .strip();
 
 export const QuerySpecSchema = z
   .object({
@@ -66,7 +66,7 @@ export const QuerySpecSchema = z
     sortDir: z.enum(['asc', 'desc']).optional(),
     limit: z.number().int().positive().max(100).optional(),
   })
-  .strict();
+  .strip();
 
 export const ForecastSpecSchema = z
   .object({
@@ -75,4 +75,4 @@ export const ForecastSpecSchema = z
     horizonMonths: z.number().int().min(1).max(12),
     method: z.enum(['moving_average', 'linear_regression']).optional(),
   })
-  .strict();
+  .strip();
