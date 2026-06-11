@@ -23,7 +23,7 @@ services:
       PORT: "3000"
       HOSTNAME: 0.0.0.0
       # Server-side (SSR) reaches the API over the internal docker network.
-      # The browser uses the relative /api path (proxied by Caddy) — no CORS.
+      # The browser uses the relative /api path (proxied by nginx) — no CORS.
       INTERNAL_API_BASE_URL: http://api:3001/api
     expose:
       - "3000"
@@ -32,19 +32,13 @@ services:
     restart: unless-stopped
 
   proxy:
-    image: caddy:2-alpine
+    image: nginx:alpine
     ports:
       # host:container — change 8080 to 80 (and add "443:443") for a public domain.
       - "${PROXY_PORT:-8080}:80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - web
       - api
     restart: unless-stopped
-
-volumes:
-  caddy_data:
-  caddy_config:

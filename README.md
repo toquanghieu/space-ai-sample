@@ -137,14 +137,14 @@ The orchestrator is tested with a fake `LlmRouter`, so the suite runs offline.
 ## Deployment
 
 ### Option A — Self-hosted with Docker / Portainer (single origin)
-A reverse proxy (Caddy) fronts both apps on **one origin**: `/api/*` → NestJS, everything else → Next.js. The browser calls the API via the relative `/api` path, so there is **no CORS**; SSR reaches the API over the internal docker network.
+A reverse proxy (nginx) fronts both apps on **one origin**: `/api/*` → NestJS, everything else → Next.js. The browser calls the API via the relative `/api` path, so there is **no CORS**; SSR reaches the API over the internal docker network.
 
 ```
-browser → Caddy :80 ─┬─ /api/* → api  :3001  (NestJS)
+browser → nginx :80 ─┬─ /api/* → api  :3001  (NestJS)
                      └─ /*     → web  :3000  (Next.js standalone)
 ```
 
-Files: `docker-compose.yml`, `Caddyfile` (or `nginx.conf`), `apps/api/Dockerfile`, `apps/web/Dockerfile`.
+Files: `docker-compose.yml`, `nginx.conf`, `apps/api/Dockerfile`, `apps/web/Dockerfile`.
 
 **Run locally:**
 ```bash
@@ -155,8 +155,7 @@ docker compose up -d --build
 
 **Portainer:** Stacks → Add stack → paste `docker-compose.yml` (or point to the Git repo). Set `OPENAI_API_KEY` (and optional `OPENAI_MODEL`, `PROXY_PORT`) as stack environment variables, then Deploy. Only the proxy port is published; `web` and `api` stay on the internal network.
 
-- **HTTPS / domain:** in `Caddyfile` replace `:80` with your domain and publish ports `80`+`443` — Caddy auto-provisions a Let's Encrypt cert.
-- **Swap Caddy for nginx:** change the `proxy` service image to `nginx:alpine` and mount `./nginx.conf:/etc/nginx/nginx.conf:ro` instead of the Caddyfile.
+- **HTTPS / domain:** add a `server` block listening on `443` with your TLS cert in `nginx.conf` (e.g. mount certs from Let's Encrypt / certbot) and publish ports `80`+`443`.
 
 #### CI/CD — push-deploy to Portainer (GitHub Actions)
 Active deployment: GitHub Actions builds + pushes both images to GHCR, then calls a **Portainer webhook** to re-pull and redeploy. The server never builds.
@@ -165,7 +164,7 @@ Active deployment: GitHub Actions builds + pushes both images to GHCR, then call
 push to main → GH Actions: build → push ghcr.io/<owner>/logistics-{api,web} → POST Portainer webhook → Portainer re-pulls & redeploys
 ```
 
-1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls images from GHCR, mounts the repo's `Caddyfile`). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `PROXY_PORT`. Enable the stack **webhook** and copy its URL.
+1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls images from GHCR, mounts the repo's `nginx.conf`). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `PROXY_PORT`. Enable the stack **webhook** and copy its URL.
 2. **GitHub:** add repo secret `PORTAINER_WEBHOOK_URL` = that webhook. Images push to GHCR via the built-in `GITHUB_TOKEN` (no extra secret).
 3. Push to `main` → `.github/workflows/deploy.yml` runs automatically (or trigger manually via *workflow_dispatch*). Each image is tagged `:latest` and `:<sha>`.
 
