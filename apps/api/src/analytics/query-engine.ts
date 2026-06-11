@@ -44,7 +44,7 @@ export function timeBucket(isoDate: string, grain: TimeGrain): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-function aggregate(group: OrderRecord[], metrics: Metric[]): Record<Metric, number> {
+function aggregate(group: OrderRecord[], metrics: Metric[]): Partial<Record<Metric, number>> {
   const delivered = group.filter((r) => r.status === 'delivered').length;
   const delayed = group.filter((r) => r.status === 'delayed').length;
   const final = delivered + delayed;
@@ -53,7 +53,7 @@ function aggregate(group: OrderRecord[], metrics: Metric[]): Record<Metric, numb
     .map(deliveryDays)
     .filter((n): n is number => n !== null);
 
-  const out = {} as Record<Metric, number>;
+  const out: Partial<Record<Metric, number>> = {};
   for (const m of metrics) {
     switch (m) {
       case 'order_count':
@@ -116,9 +116,10 @@ export function runQuery(allRows: readonly OrderRecord[], spec: QuerySpec): Quer
     out.push({ ...keyParts, ...aggregate(rows, spec.metrics) });
   }
 
-  if (spec.sortBy) {
+  const sortKey = spec.sortBy;
+  if (sortKey) {
     const dir = spec.sortDir === 'asc' ? 1 : -1;
-    out.sort((a, b) => ((a[spec.sortBy!] as number) - (b[spec.sortBy!] as number)) * dir);
+    out.sort((a, b) => ((a[sortKey] as number) - (b[sortKey] as number)) * dir);
   } else if (hasTime) {
     out.sort((a, b) => String(a.period).localeCompare(String(b.period)));
   }

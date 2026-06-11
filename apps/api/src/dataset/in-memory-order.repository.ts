@@ -2,8 +2,16 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
-import type { OrderRecord } from '@logi/shared';
+import type { OrderRecord, OrderStatus } from '@logi/shared';
 import type { OrderRepository } from '../domain/ports';
+
+const VALID_STATUSES: ReadonlySet<OrderStatus> = new Set([
+  'delivered',
+  'delayed',
+  'in_transit',
+  'exception',
+  'canceled',
+]);
 
 /**
  * In-memory implementation of the {@link OrderRepository} port. Loads the
@@ -44,10 +52,21 @@ export class InMemoryOrderRepository implements OrderRepository, OnModuleInit {
       skip_empty_lines: true,
       trim: true,
     });
-    return records.map((r) => this.normalise(r));
+    return records.map((r, i) => this.normalise(r, i));
   }
 
-  private normalise(r: Record<string, string>): OrderRecord {
+  private num(value: string, field: string, rowIndex: number): number {
+    const n = Number(value);
+    if (Number.isNaN(n)) {
+      throw new Error(`Invalid number in column "${field}" at row ${rowIndex + 1}: "${value}"`);
+    }
+    return n;
+  }
+
+  private normalise(r: Record<string, string>, rowIndex: number): OrderRecord {
+    if (!VALID_STATUSES.has(r.status as OrderStatus)) {
+      throw new Error(`Invalid status at row ${rowIndex + 1}: "${r.status}"`);
+    }
     return {
       client_id: r.client_id,
       order_id: r.order_id,
@@ -56,14 +75,14 @@ export class InMemoryOrderRepository implements OrderRepository, OnModuleInit {
       carrier: r.carrier,
       origin_city: r.origin_city,
       destination_city: r.destination_city,
-      status: r.status as OrderRecord['status'],
+      status: r.status as OrderStatus,
       sku: r.sku,
       product_category: r.product_category,
-      quantity: Number(r.quantity),
-      unit_price_usd: Number(r.unit_price_usd),
-      order_value_usd: Number(r.order_value_usd),
+      quantity: this.num(r.quantity, 'quantity', rowIndex),
+      unit_price_usd: this.num(r.unit_price_usd, 'unit_price_usd', rowIndex),
+      order_value_usd: this.num(r.order_value_usd, 'order_value_usd', rowIndex),
       is_promo: r.is_promo === '1' || r.is_promo?.toLowerCase() === 'true',
-      promo_discount_pct: Number(r.promo_discount_pct),
+      promo_discount_pct: this.num(r.promo_discount_pct, 'promo_discount_pct', rowIndex),
       region: r.region,
       warehouse: r.warehouse,
     };

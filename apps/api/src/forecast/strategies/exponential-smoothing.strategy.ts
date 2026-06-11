@@ -24,8 +24,8 @@ export class ExponentialSmoothingStrategy implements ForecastStrategy {
 
   forecast(history: number[], horizon: number): number[] {
     const n = history.length;
-    if (n === 0) return Array(horizon).fill(0);
-    if (n === 1) return Array(horizon).fill(Math.max(0, Math.round(history[0])));
+    if (n === 0) return Array<number>(horizon).fill(0);
+    if (n === 1) return Array<number>(horizon).fill(Math.max(0, Math.round(history[0])));
 
     let level = history[0];
     let trend = 0; // start flat so an outlier first month doesn't seed a huge slope

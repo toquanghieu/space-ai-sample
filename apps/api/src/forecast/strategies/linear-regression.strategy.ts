@@ -12,8 +12,8 @@ export class LinearRegressionStrategy implements ForecastStrategy {
 
   forecast(history: number[], horizon: number): number[] {
     const n = history.length;
-    if (n === 0) return Array(horizon).fill(0);
-    if (n === 1) return Array(horizon).fill(Math.max(0, Math.round(history[0])));
+    if (n === 0) return Array<number>(horizon).fill(0);
+    if (n === 1) return Array<number>(horizon).fill(Math.max(0, Math.round(history[0])));
 
     const xs = history.map((_, i) => i);
     const meanX = xs.reduce((a, b) => a + b, 0) / n;

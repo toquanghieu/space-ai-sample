@@ -53,12 +53,15 @@ export function ExplainabilityPanel({ result }: { result: QueryResult }) {
             </TableHeader>
             <TableBody>
               {result.rows.slice(0, 50).map((r, i) => (
-                <TableRow key={i}>
-                  {cols.map((c) => (
-                    <TableCell key={c} className="tabular-nums">
-                      {typeof r[c] === 'number' ? Number((r[c] as number).toFixed(2)) : r[c]}
-                    </TableCell>
-                  ))}
+                <TableRow key={cols.map((c) => r[c]).join('|') || i}>
+                  {cols.map((c) => {
+                    const v = r[c];
+                    return (
+                      <TableCell key={c} className="tabular-nums">
+                        {typeof v === 'number' ? Number(v.toFixed(2)) : v}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableBody>

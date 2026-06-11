@@ -68,6 +68,12 @@ export const QuerySpecSchema = z
   })
   .strip();
 
+export const AskRequestSchema = z
+  .object({
+    question: z.string().trim().min(1, 'question must not be empty').max(1000),
+  })
+  .strip();
+
 export const ForecastSpecSchema = z
   .object({
     metric: z.enum(['total_quantity', 'order_count']),

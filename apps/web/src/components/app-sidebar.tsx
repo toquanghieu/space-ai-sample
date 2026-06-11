@@ -19,6 +19,7 @@ function NavItems({ pathname }: { pathname: string }) {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={active ? 'page' : undefined}
             className={cn(
               'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
               active
@@ -78,6 +79,7 @@ export function AppSidebar() {
                 key={item.href}
                 href={item.href}
                 aria-label={item.label}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex size-9 items-center justify-center rounded-lg',
                   active

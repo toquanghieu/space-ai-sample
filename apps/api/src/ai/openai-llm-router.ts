@@ -51,7 +51,14 @@ export class OpenAiLlmRouter implements LlmRouter {
 
     const call = completion.choices[0]?.message?.tool_calls?.[0];
     if (!call) throw new BadRequestException('Model did not select a tool.');
-    return { name: call.function.name, args: JSON.parse(call.function.arguments || '{}') };
+
+    let args: unknown;
+    try {
+      args = JSON.parse(call.function.arguments || '{}');
+    } catch {
+      throw new BadRequestException('Model returned malformed tool arguments.');
+    }
+    return { name: call.function.name, args };
   }
 
   /** Map upstream OpenAI failures to a clear, non-500 response for the UI. */

@@ -56,10 +56,11 @@ export class ForecastService {
     const allMonths = [...historyMonths, ...forecastMonths];
 
     // Build the groups: one per distinct dimension value, or a single 'all'.
-    const groupRows: { key: string; label: string; rows: OrderRecord[] }[] = spec.groupBy
-      ? [...new Set(filtered.map((r) => String(r[spec.groupBy!])))]
+    const groupBy = spec.groupBy;
+    const groupRows: { key: string; label: string; rows: OrderRecord[] }[] = groupBy
+      ? [...new Set(filtered.map((r) => String(r[groupBy])))]
           .sort()
-          .map((v) => ({ key: v, label: v, rows: filtered.filter((r) => String(r[spec.groupBy!]) === v) }))
+          .map((v) => ({ key: v, label: v, rows: filtered.filter((r) => String(r[groupBy]) === v) }))
       : [{ key: 'all', label: scopeLabel(spec.filters), rows: filtered }];
 
     const groups: ForecastGroupRecommendation[] = [];

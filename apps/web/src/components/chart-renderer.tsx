@@ -61,7 +61,7 @@ export function ChartRenderer({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey={chart.xKey} fontSize={12} tickMargin={8} />
             <YAxis fontSize={12} width={40} />
-            <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
+            <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${String(l)}`} />
             {!singleSeries && <Legend formatter={legendFormatter} />}
             {referenceLineX && (
               <ReferenceLine
@@ -88,7 +88,7 @@ export function ChartRenderer({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey={chart.xKey} fontSize={12} tickMargin={8} />
             <YAxis fontSize={12} width={40} />
-            <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
+            <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${String(l)}`} />
             {!singleSeries && <Legend formatter={legendFormatter} />}
             {chart.yKeys.map((k, i) => (
               <Bar
@@ -100,7 +100,9 @@ export function ChartRenderer({
               >
                 {/* single-metric breakdown: colour each bar by its category */}
                 {singleSeries &&
-                  rows.map((_, ri) => <Cell key={ri} fill={PALETTE[ri % PALETTE.length]} />)}
+                  rows.map((row, ri) => (
+                    <Cell key={String(row[chart.xKey])} fill={PALETTE[ri % PALETTE.length]} />
+                  ))}
               </Bar>
             ))}
           </BarChart>

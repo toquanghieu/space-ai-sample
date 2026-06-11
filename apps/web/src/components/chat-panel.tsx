@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { AskResponse } from '@logi/shared';
 import { ask } from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -20,17 +20,21 @@ export function ChatPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [res, setRes] = useState<AskResponse | null>(null);
+  // Monotonic id so a slow earlier request can't overwrite a newer answer.
+  const requestId = useRef(0);
 
   async function run(question: string) {
+    const id = ++requestId.current;
     setLoading(true);
     setError(null);
     setRes(null);
     try {
-      setRes(await ask(question));
+      const answer = await ask(question);
+      if (id === requestId.current) setRes(answer);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed');
+      if (id === requestId.current) setError(e instanceof Error ? e.message : 'Failed');
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   }
 
@@ -46,6 +50,7 @@ export function ChatPanel() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          aria-label="Ask a question about the logistics data"
           placeholder="Ask a question about the logistics data…"
         />
         <Button type="submit" disabled={loading}>
@@ -57,11 +62,13 @@ export function ChatPanel() {
         {SUGGESTIONS.map((s) => (
           <button
             key={s}
+            type="button"
+            disabled={loading}
             onClick={() => {
               setQ(s);
               run(s);
             }}
-            className="rounded-full border px-3 py-1 text-xs hover:bg-muted"
+            className="rounded-full border px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
           >
             {s}
           </button>
