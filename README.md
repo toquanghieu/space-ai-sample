@@ -147,7 +147,7 @@ LAN ─ http://10.10.10.63 ─→ nginx (macvlan net1010 + internal bridge)
                               └─ /*     → web  :3000  (Next.js standalone)
 ```
 
-Files: `docker-compose.yml`, `nginx.conf`, `apps/api/Dockerfile`, `apps/web/Dockerfile`.
+Files: `docker-compose.yml`, `nginx.conf` (baked into the proxy image), `apps/{api,web,proxy}/Dockerfile`.
 
 **Run locally:**
 ```bash
@@ -168,10 +168,10 @@ The macvlan network `net1010` must already exist on the host; `PROXY_IP` must be
 Active deployment: GitHub Actions builds + pushes both images to GHCR, then calls a **Portainer webhook** to re-pull and redeploy. The server never builds.
 
 ```
-push to main → GH Actions: build → push ghcr.io/<owner>/logistics-{api,web} → POST Portainer webhook → Portainer re-pulls & redeploys
+push to main → GH Actions: build → push ghcr.io/<owner>/logistics-{api,web,proxy} → POST Portainer webhook → Portainer re-pulls & redeploys
 ```
 
-1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls images from GHCR, mounts the repo's `nginx.conf`). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `LAN_NETWORK=net1010`, `PROXY_IP=10.10.10.63`. Enable the stack **webhook** and copy its URL.
+1. **Portainer:** deploy a stack from this Git repo using `docker-compose.prod.yml` (it pulls all three images from GHCR — the nginx config is baked into the `logistics-proxy` image, so there is no host bind-mount). Set stack env: `IMAGE_PREFIX=ghcr.io/<owner-lowercase>`, `TAG=latest`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `LAN_NETWORK=net1010`, `PROXY_IP=10.10.10.63`. Enable the stack **webhook** and copy its URL.
 2. **GitHub:** add repo secret `PORTAINER_WEBHOOK_URL` = that webhook. Images push to GHCR via the built-in `GITHUB_TOKEN` (no extra secret).
 3. Push to `main` → `.github/workflows/deploy.yml` runs automatically (or trigger manually via *workflow_dispatch*). Each image is tagged `:latest` and `:<sha>`.
 
