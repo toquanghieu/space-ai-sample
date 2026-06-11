@@ -1,6 +1,7 @@
 {
   "name": "logistics-analytics",
   "private": true,
+  "packageManager": "pnpm@10.19.0",
   "scripts": {
     "dev:api": "pnpm --filter api start:dev",
     "dev:web": "pnpm --filter web dev",

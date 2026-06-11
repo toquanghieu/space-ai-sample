@@ -134,7 +134,31 @@ pnpm --filter api test     # 27 unit tests: KPIs, query engine, strategies, serv
 ```
 The orchestrator is tested with a fake `LlmRouter`, so the suite runs offline.
 
-## Deployment (Vercel, two projects)
+## Deployment
+
+### Option A — Self-hosted with Docker / Portainer (single origin)
+A reverse proxy (Caddy) fronts both apps on **one origin**: `/api/*` → NestJS, everything else → Next.js. The browser calls the API via the relative `/api` path, so there is **no CORS**; SSR reaches the API over the internal docker network.
+
+```
+browser → Caddy :80 ─┬─ /api/* → api  :3001  (NestJS)
+                     └─ /*     → web  :3000  (Next.js standalone)
+```
+
+Files: `docker-compose.yml`, `Caddyfile` (or `nginx.conf`), `apps/api/Dockerfile`, `apps/web/Dockerfile`.
+
+**Run locally:**
+```bash
+cp .env.docker.example .env   # set OPENAI_API_KEY
+docker compose up -d --build
+# open http://localhost:8080  (PROXY_PORT)
+```
+
+**Portainer:** Stacks → Add stack → paste `docker-compose.yml` (or point to the Git repo). Set `OPENAI_API_KEY` (and optional `OPENAI_MODEL`, `PROXY_PORT`) as stack environment variables, then Deploy. Only the proxy port is published; `web` and `api` stay on the internal network.
+
+- **HTTPS / domain:** in `Caddyfile` replace `:80` with your domain and publish ports `80`+`443` — Caddy auto-provisions a Let's Encrypt cert.
+- **Swap Caddy for nginx:** change the `proxy` service image to `nginx:alpine` and mount `./nginx.conf:/etc/nginx/nginx.conf:ro` instead of the Caddyfile.
+
+### Option B — Vercel (two projects)
 - **API project:** root `apps/api`, framework "Other", env `OPENAI_API_KEY`. Runs as a serverless function via `apps/api/api/index.ts`; the CSV is bundled (`vercel.json` `includeFiles`).
 - **Web project:** root `apps/web`, framework Next.js, env `NEXT_PUBLIC_API_BASE_URL=<api URL>/api`.
 - Fallback: if NestJS cold-starts are undesirable, deploy the API to Railway/Render and only change `NEXT_PUBLIC_API_BASE_URL` — no code change.

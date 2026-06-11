@@ -1,0 +1,50 @@
+# Self-hosted stack for Portainer (Stacks → Add stack → paste / point to repo).
+# One reverse proxy in front; frontend and backend share a single origin via /api.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+    expose:
+      - "3001"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      # Server-side (SSR) reaches the API over the internal docker network.
+      # The browser uses the relative /api path (proxied by Caddy) — no CORS.
+      INTERNAL_API_BASE_URL: http://api:3001/api
+    expose:
+      - "3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      # host:container — change 8080 to 80 (and add "443:443") for a public domain.
+      - "${PROXY_PORT:-8080}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

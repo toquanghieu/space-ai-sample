@@ -1,0 +1,16 @@
+# Single-origin reverse proxy: everything on one host, backend served under /api.
+# For HTTPS, replace ":80" with your domain (e.g. "logistics.example.com") and map
+# host ports 80+443 — Caddy will auto-provision a Let's Encrypt certificate.
+:80 {
+	# NestJS uses the global prefix /api, so the full path is forwarded as-is.
+	handle /api/* {
+		reverse_proxy api:3001
+	}
+
+	# Everything else → the Next.js app.
+	handle {
+		reverse_proxy web:3000
+	}
+
+	encode gzip
+}

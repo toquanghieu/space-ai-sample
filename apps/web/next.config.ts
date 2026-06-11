@@ -1,10 +1,15 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+const root = path.join(__dirname, "..", "..");
+
 const nextConfig: NextConfig = {
-  // Monorepo: pin the workspace root so Next does not warn about multiple lockfiles.
+  // Self-contained server build for Docker (only traced deps shipped).
+  output: "standalone",
+  // Monorepo: trace/resolve from the workspace root (also silences the lockfile warning).
+  outputFileTracingRoot: root,
   turbopack: {
-    root: path.join(__dirname, "..", ".."),
+    root,
   },
 };
 
