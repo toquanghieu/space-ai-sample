@@ -6,6 +6,7 @@ import {
   Line,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -15,16 +16,29 @@ import {
 
 import { labelFor } from '@/lib/labels';
 
-const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea'];
+// Palette big enough for the widest breakdown (9 carriers / 8 categories).
+const PALETTE = [
+  '#2563eb',
+  '#16a34a',
+  '#dc2626',
+  '#9333ea',
+  '#ea580c',
+  '#0891b2',
+  '#ca8a04',
+  '#db2777',
+  '#4f46e5',
+  '#65a30d',
+];
 
-export function ChartRenderer({
-  chart,
-  rows,
-}: {
-  chart: ChartSpec;
-  rows: Record<string, string | number>[];
-}) {
+type Rows = Record<string, string | number>[];
+
+export function ChartRenderer({ chart, rows }: { chart: ChartSpec; rows: Rows }) {
   if (chart.type === 'none' || rows.length === 0) return null;
+
+  // Single-metric breakdown by a dimension → colour each bar by category.
+  // Multi-metric → one colour per metric series (legend explains them).
+  const singleSeries = chart.yKeys.length === 1;
+
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -34,14 +48,14 @@ export function ChartRenderer({
             <XAxis dataKey={chart.xKey} fontSize={12} tickMargin={8} />
             <YAxis fontSize={12} width={40} />
             <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
-            <Legend formatter={(v) => labelFor(String(v))} />
+            {!singleSeries && <Legend formatter={(v) => labelFor(String(v))} />}
             {chart.yKeys.map((k, i) => (
               <Line
                 key={k}
                 type="monotone"
                 dataKey={k}
                 name={labelFor(k)}
-                stroke={COLORS[i % COLORS.length]}
+                stroke={PALETTE[i % PALETTE.length]}
                 dot={false}
                 strokeWidth={2}
               />
@@ -53,9 +67,13 @@ export function ChartRenderer({
             <XAxis dataKey={chart.xKey} fontSize={12} tickMargin={8} />
             <YAxis fontSize={12} width={40} />
             <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
-            <Legend formatter={(v) => labelFor(String(v))} />
+            {!singleSeries && <Legend formatter={(v) => labelFor(String(v))} />}
             {chart.yKeys.map((k, i) => (
-              <Bar key={k} dataKey={k} name={labelFor(k)} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
+              <Bar key={k} dataKey={k} name={labelFor(k)} radius={[4, 4, 0, 0]}>
+                {singleSeries
+                  ? rows.map((_, ri) => <Cell key={ri} fill={PALETTE[ri % PALETTE.length]} />)
+                  : rows.map((_, ri) => <Cell key={ri} fill={PALETTE[i % PALETTE.length]} />)}
+              </Bar>
             ))}
           </BarChart>
         )}
