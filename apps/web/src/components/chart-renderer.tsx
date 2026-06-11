@@ -48,6 +48,11 @@ export function ChartRenderer({
   // Multi-metric → one colour per metric series (legend explains them).
   const singleSeries = chart.yKeys.length === 1;
 
+  // Recharts renders legend text in default (black). Colour it to match the series.
+  const legendFormatter = (value: unknown, entry?: { color?: string }) => (
+    <span style={{ color: entry?.color }}>{labelFor(String(value))}</span>
+  );
+
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -57,7 +62,7 @@ export function ChartRenderer({
             <XAxis dataKey={chart.xKey} fontSize={12} tickMargin={8} />
             <YAxis fontSize={12} width={40} />
             <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
-            {!singleSeries && <Legend formatter={(v) => labelFor(String(v))} />}
+            {!singleSeries && <Legend formatter={legendFormatter} />}
             {referenceLineX && (
               <ReferenceLine
                 x={referenceLineX}
@@ -84,12 +89,18 @@ export function ChartRenderer({
             <XAxis dataKey={chart.xKey} fontSize={12} tickMargin={8} />
             <YAxis fontSize={12} width={40} />
             <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
-            {!singleSeries && <Legend formatter={(v) => labelFor(String(v))} />}
+            {!singleSeries && <Legend formatter={legendFormatter} />}
             {chart.yKeys.map((k, i) => (
-              <Bar key={k} dataKey={k} name={labelFor(k)} radius={[4, 4, 0, 0]}>
-                {singleSeries
-                  ? rows.map((_, ri) => <Cell key={ri} fill={PALETTE[ri % PALETTE.length]} />)
-                  : rows.map((_, ri) => <Cell key={ri} fill={PALETTE[i % PALETTE.length]} />)}
+              <Bar
+                key={k}
+                dataKey={k}
+                name={labelFor(k)}
+                fill={PALETTE[i % PALETTE.length]}
+                radius={[4, 4, 0, 0]}
+              >
+                {/* single-metric breakdown: colour each bar by its category */}
+                {singleSeries &&
+                  rows.map((_, ri) => <Cell key={ri} fill={PALETTE[ri % PALETTE.length]} />)}
               </Bar>
             ))}
           </BarChart>
