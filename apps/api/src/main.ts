@@ -1,3 +1,4 @@
+import 'dotenv/config'; // load apps/api/.env for local dev (Vercel injects env vars in prod)
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
