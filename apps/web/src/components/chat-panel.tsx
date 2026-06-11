@@ -85,16 +85,24 @@ export function ChatPanel() {
             {res.tool === 'forecast_demand' && res.forecast && (
               <>
                 <ChartRenderer
-                  chart={{ type: 'line', xKey: 'period', yKeys: ['value'], title: 'Demand forecast' }}
-                  rows={res.forecast.series.map((p) => ({
-                    period: p.period,
-                    value: p.value,
-                    kind: p.kind,
-                  }))}
+                  chart={{
+                    type: 'line',
+                    xKey: 'period',
+                    yKeys: res.forecast.seriesKeys,
+                    title: 'Demand forecast',
+                  }}
+                  rows={res.forecast.rows}
+                  referenceLineX={res.forecast.forecastStartPeriod}
                 />
                 <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
-                  <p className="font-medium">Inventory recommendation</p>
-                  <p>{res.forecast.inventoryRecommendation.rationale}</p>
+                  <p className="font-medium">
+                    Inventory recommendation{res.forecast.groups.length > 1 ? 's' : ''}
+                  </p>
+                  <div className="max-h-48 space-y-1 overflow-auto">
+                    {res.forecast.groups.map((g) => (
+                      <p key={g.key}>{g.recommendation.rationale}</p>
+                    ))}
+                  </div>
                   <p className="text-muted-foreground">
                     Method: {res.forecast.method}. {res.forecast.explanation}
                   </p>

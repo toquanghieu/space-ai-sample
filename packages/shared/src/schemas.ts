@@ -74,5 +74,6 @@ export const ForecastSpecSchema = z
     filters: FiltersSchema.optional(),
     horizonMonths: z.number().int().min(1).max(12),
     method: z.enum(['moving_average', 'linear_regression']).optional(),
+    groupBy: z.enum(['product_category', 'carrier', 'region', 'sku']).optional(),
   })
   .strip();

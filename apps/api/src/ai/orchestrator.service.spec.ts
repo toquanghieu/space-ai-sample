@@ -52,7 +52,8 @@ describe('OrchestratorService', () => {
     const svc = build({ name: 'forecast_demand', args: { metric: 'total_quantity', horizonMonths: 4 } });
     const res = await svc.ask('Predict demand for the next 4 months');
     expect(res.tool).toBe('forecast_demand');
-    expect(res.forecast?.series.length).toBeGreaterThan(0);
+    expect(res.forecast?.rows.length).toBeGreaterThan(0);
+    expect(res.forecast?.groups.length).toBeGreaterThan(0);
   });
 
   it('rejects invalid tool args instead of executing them', async () => {

@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
+  ReferenceLine,
 } from 'recharts';
 
 import { labelFor } from '@/lib/labels';
@@ -32,7 +33,15 @@ const PALETTE = [
 
 type Rows = Record<string, string | number>[];
 
-export function ChartRenderer({ chart, rows }: { chart: ChartSpec; rows: Rows }) {
+export function ChartRenderer({
+  chart,
+  rows,
+  referenceLineX,
+}: {
+  chart: ChartSpec;
+  rows: Rows;
+  referenceLineX?: string | null;
+}) {
   if (chart.type === 'none' || rows.length === 0) return null;
 
   // Single-metric breakdown by a dimension → colour each bar by category.
@@ -49,6 +58,14 @@ export function ChartRenderer({ chart, rows }: { chart: ChartSpec; rows: Rows })
             <YAxis fontSize={12} width={40} />
             <Tooltip labelFormatter={(l) => `${labelFor(chart.xKey)}: ${l}`} />
             {!singleSeries && <Legend formatter={(v) => labelFor(String(v))} />}
+            {referenceLineX && (
+              <ReferenceLine
+                x={referenceLineX}
+                stroke="#94a3b8"
+                strokeDasharray="4 4"
+                label={{ value: 'forecast →', position: 'insideTopRight', fontSize: 11, fill: '#64748b' }}
+              />
+            )}
             {chart.yKeys.map((k, i) => (
               <Line
                 key={k}

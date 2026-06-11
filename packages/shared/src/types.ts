@@ -90,17 +90,14 @@ export interface QueryResult {
 
 export type ForecastMethod = 'moving_average' | 'linear_regression';
 
+export type ForecastGroupDimension = 'product_category' | 'carrier' | 'region' | 'sku';
+
 export interface ForecastSpec {
   metric: 'total_quantity' | 'order_count';
   filters?: Filters; // typically { sku } or { product_category }
   horizonMonths: number; // 1..12
   method?: ForecastMethod;
-}
-
-export interface ForecastPoint {
-  period: string;
-  value: number;
-  kind: 'history' | 'forecast';
+  groupBy?: ForecastGroupDimension; // when set, one forecast line per group value
 }
 
 export interface InventoryRecommendation {
@@ -111,10 +108,19 @@ export interface InventoryRecommendation {
   rationale: string;
 }
 
+export interface ForecastGroupRecommendation {
+  key: string; // group value, or 'all'
+  label: string; // series label shown in the chart
+  recommendation: InventoryRecommendation;
+}
+
 export interface ForecastResult {
   method: ForecastMethod;
-  series: ForecastPoint[];
-  inventoryRecommendation: InventoryRecommendation;
+  groupBy?: ForecastGroupDimension;
+  rows: ResultRow[]; // wide format: { period, <label1>: v, <label2>: v, ... }
+  seriesKeys: string[]; // y-keys to plot (one line per group)
+  forecastStartPeriod: string | null; // first forecast month (boundary marker)
+  groups: ForecastGroupRecommendation[]; // per-series inventory recommendation
   explanation: string;
 }
 
